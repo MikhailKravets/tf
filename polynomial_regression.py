@@ -5,7 +5,6 @@ import matplotlib.pyplot as pl
 
 
 def transform(x, power):
-
     res = np.hstack((np.ones(shape=(len(x), 1)), x))
     for p in range(2, power + 1):
         res = np.hstack((res, x ** p))
@@ -17,7 +16,7 @@ order = 4
 epochs = 4000
 
 x = np.linspace(-1, 2, 1000)
-y = np.sin(x) * np.e ** -x
+y = np.sin(x) * np.e ** -x + np.random.normal(size=len(x), scale=0.5)
 
 x_train = transform(x.reshape((len(x), 1)), order)
 y_train = y.reshape((len(y), 1))
