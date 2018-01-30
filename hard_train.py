@@ -1,6 +1,7 @@
 import csv
 import numpy as np
 import tensorflow as tf
+import time
 import tqdm
 
 
@@ -73,8 +74,8 @@ def build_network(x, y):
 
 
 if __name__ == '__main__':
-    alpha = 0.7
-    learn_rate = 0.05
+    weight_decay = 0.7
+    learn_rate = 0.1
     epochs = 1300
     batch_size = 8
 
@@ -89,14 +90,27 @@ if __name__ == '__main__':
     nn = build_network(x, y)
 
     reduction = tf.reduce_mean((y - nn) ** 2)
-    loss = reduction + alpha * tf.nn.l2_loss(nn)
-    optimizer = tf.train.GradientDescentOptimizer(learn_rate).minimize(loss)
+    loss = reduction + weight_decay * tf.nn.l2_loss(nn)
+
+    global_step = tf.Variable(0, trainable=False)
+    lr = tf.train.exponential_decay(learn_rate, global_step, epochs, 0.9)
+    optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss, global_step)
+
+    tf.summary.scalar('Validation', reduction)
+    tf.summary.scalar('Train', loss)
+    tf.summary.scalar('LearningRate', lr)
+
+    merged = tf.summary.merge_all()
+    writer = tf.summary.FileWriter(f'tmp/log{int(time.time() * 1000)}', graph=tf.get_default_graph())
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+        saver = tf.train.Saver()
 
-        for _ in tqdm.tqdm(range(epochs)):
+        for step in tqdm.tqdm(range(epochs)):
             for i in range(0, len(tx), batch_size):
-                _, err = sess.run([optimizer, loss],
-                                  feed_dict={x: tx[i:i + batch_size], y: ty[i:i + batch_size]})
+                sess.run([optimizer, loss], feed_dict={x: tx[i:i + batch_size], y: ty[i:i + batch_size]})
+                summary = sess.run(merged, feed_dict={x: tx[i:i + batch_size], y: ty[i:i + batch_size]})
+                writer.add_summary(summary, step)
+        saver.save(sess, 'model/network')
 
