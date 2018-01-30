@@ -1,5 +1,7 @@
 import csv
 import numpy as np
+import tensorflow as tf
+import tqdm
 
 
 def from_csv(file_name: str) -> (np.ndarray, np.ndarray):
@@ -52,6 +54,49 @@ def separate_data(x: np.ndarray, y: np.ndarray, percentage: float) -> ((np.ndarr
     return tx, ty, vx, vy
 
 
+def build_network(x, y):
+    """
+    Build Fully connected neural network
+
+    :param x: `tf.placeholder` tensor
+    :param y: `tf.placeholder` tensor
+    :return: built neural network
+    """
+    nn = tf.layers.dense(x, x.shape[1], tf.nn.tanh)
+    nn = tf.layers.dense(nn, 23, tf.nn.tanh)
+    nn = tf.layers.dense(nn, 28, tf.nn.tanh)
+    nn = tf.layers.dense(nn, 28, tf.nn.tanh)
+    nn = tf.layers.dense(nn, 28, tf.nn.tanh)
+    nn = tf.layers.dense(nn, 28, tf.nn.tanh)
+
+    return tf.layers.dense(nn, y.shape[1], tf.nn.tanh, name='Output_layer')
+
+
 if __name__ == '__main__':
-    x, y = from_csv("D:\\DELETE\\Дипломмо\\output.csv")
-    tx, ty, vx, vy = separate_data(x, y, 0.15)
+    alpha = 0.7
+    learn_rate = 0.05
+    epochs = 1300
+    batch_size = 8
+
+    input_, output = from_csv("D:\\DELETE\\Дипломмо\\output.csv")
+    tx, ty, vx, vy = separate_data(input_, output, 0.15)
+
+    dim_x, dim_y = input_.shape[1], output.shape[1]
+
+    x = tf.placeholder(shape=[None, dim_x], name='Times', dtype=tf.float32)
+    y = tf.placeholder(shape=[None, dim_y], name='Marks', dtype=tf.float32)
+
+    nn = build_network(x, y)
+
+    reduction = tf.reduce_mean((y - nn) ** 2)
+    loss = reduction + alpha * tf.nn.l2_loss(nn)
+    optimizer = tf.train.GradientDescentOptimizer(learn_rate).minimize(loss)
+
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+
+        for _ in tqdm.tqdm(range(epochs)):
+            for i in range(0, len(tx), batch_size):
+                _, err = sess.run([optimizer, loss],
+                                  feed_dict={x: tx[i:i + batch_size], y: ty[i:i + batch_size]})
+
