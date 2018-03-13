@@ -24,6 +24,7 @@ nn = tf.layers.max_pooling2d(
     inputs=nn,
     pool_size=(2, 2),
     strides=2,
+    padding='same'
 )
 
 nn = tf.layers.conv2d(
@@ -37,7 +38,8 @@ nn = tf.layers.conv2d(
 nn = tf.layers.max_pooling2d(
     inputs=nn,
     pool_size=(2, 2),
-    strides=2
+    strides=2,
+    padding='same'
 )
 
 pool_dense = tf.layers.dense(tf.reshape(nn, [-1, 7 * 7 * 64]), units=1024, activation=tf.nn.relu)
@@ -62,6 +64,7 @@ with tf.Session() as sess:
 
     v = mnist.test.next_batch(1)
     pl.imshow(v[0].reshape(28, 28))
+    pl.imshow(sess.run(nn, feed_dict={x: v[0].reshape(1, 784)}).reshape(56, 56))
     print()
     print(f"Pred: {sess.run(prediction, feed_dict={x: v[0].reshape(1, 784)})}")
     print(f"Real: {v[1]}")
